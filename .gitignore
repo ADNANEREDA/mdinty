@@ -1,0 +1,24 @@
+# Angular & Node
+node_modules/
+dist/
+.angular/
+
+# Spring Boot & Java
+target/
+*.class
+.mvn/
+
+# Python & IA
+venv/
+__pycache__/
+*.pyc
+
+# IDE, OS & Environnement
+.vscode/
+.idea/
+.DS_Store
+.env
+
+# Docker (Bases de données locales)
+infrastructure/mdinty_pgdata/
+infrastructure/mdinty_miniodata/
