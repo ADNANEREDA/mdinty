@@ -1,19 +1,5 @@
 services:
-  # 1. Base de données Géospatiale (PostgreSQL + PostGIS)
-  mdinty-db:
-    image: postgis/postgis:15-3.4
-    container_name: mdinty_postgres
-    environment:
-      POSTGRES_USER: mdinty_admin
-      POSTGRES_PASSWORD: mdinty_password
-      POSTGRES_DB: mdinty_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - mdinty_pgdata:/var/lib/postgresql/data
-    restart: unless-stopped
-
-  # 2. Stockage des Photos (Miroir communautaire public)
+  # Stockage des Photos d'Incidents (Compatible S3)
   mdinty-storage:
     image: pgsty/minio:latest
     container_name: mdinty_minio
@@ -21,13 +7,12 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: miniopassword
     ports:
-      - "9000:9000" 
-      - "9001:9001" 
+      - "9000:9000"
+      - "9001:9001"
     command: server /data --console-address ":9001"
     volumes:
       - mdinty_miniodata:/data
     restart: unless-stopped
 
 volumes:
-  mdinty_pgdata:
   mdinty_miniodata:
