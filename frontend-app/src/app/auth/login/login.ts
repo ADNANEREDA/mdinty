@@ -43,10 +43,9 @@ export class Login {
       email: this.email,
       password: this.password
     }).subscribe({
-      next: (user) => {
+     next: (user) => {
         this.isLoading = false;
         this.cdr.detectChanges();
-        localStorage.setItem('currentUser', JSON.stringify(user));
         localStorage.setItem('token', user.token);
         localStorage.setItem('currentUser', JSON.stringify(user));
 
@@ -61,7 +60,7 @@ export class Login {
             alert(`Bienvenue Membre d'équipe (${user.serviceName}) : ${user.prenom} ${user.nom} !`);
             break;
           case 'CITOYEN':
-            alert(`Bienvenue Citoyen(ne) ${user.prenom} ${user.nom} !`);
+            this.router.navigate(['/citizen/dashboard']);
             break;
         }
       },

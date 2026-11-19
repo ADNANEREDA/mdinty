@@ -1,0 +1,323 @@
+<header class="sticky top-0 z-50 w-full bg-white border-b border-slate-200/80 font-sans">
+  <div class="min-h-16 px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+    <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+      <div (click)="switchTab('MAP')" class="flex items-center gap-2 sm:gap-2.5 cursor-pointer">
+        <img src="logo.png" alt="Mdinty" class="w-10 h-10 sm:w-14 sm:h-14 object-contain rounded-lg" onerror="this.style.display='none'" />
+        <div class="leading-none">
+          <span class="font-heading font-bold text-base sm:text-xl text-brand tracking-tight block">Mdinty</span>
+          <span class="text-[8px] sm:text-[9px] font-bold tracking-[0.18em] text-accent uppercase">Fès Smart City</span>
+        </div>
+      </div>
+      <span class="hidden xl:inline-block h-5 w-px bg-slate-200"></span>
+      <span class="hidden xl:inline-block text-xs italic text-slate-500">
+        «  Fès testahl ma7sen,  Mdintena bin ydina. »
+      </span>
+    </div>
+
+    <nav class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto max-w-full">
+      <button type="button" (click)="switchTab('MAP'); activeFilter.set('ALL')"
+              [class]="activeTab() === 'MAP' ? 'bg-sky-50 text-brand font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+              class="transition-all flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm whitespace-nowrap">
+        <span></span> Vue Carte
+      </button>
+      <button type="button" (click)="switchTab('MY_REPORTS'); activeFilter.set('ALL')"
+              [class]="activeTab() === 'MY_REPORTS' ? 'bg-sky-50 text-brand font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+              class="transition-all flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm whitespace-nowrap">
+        <span></span> Mes Signalements
+      </button>
+      <button type="button" (click)="switchTab('PROPOSALS')"
+              [class]="activeTab() === 'PROPOSALS' ? 'bg-sky-50 text-brand font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+              class="transition-all flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm whitespace-nowrap">
+        <span></span> Propositions
+      </button>
+    </nav>
+
+    <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
+      <div class="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200">
+        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-brand text-white font-heading font-semibold text-xs flex items-center justify-center ring-2 ring-accent/30">
+          {{ getUserInitials() }}
+        </div>
+        <span class="text-sm font-medium text-brand hidden sm:inline">
+          {{ currentUser().prenom }} {{ currentUser().nom }}
+        </span>
+      </div>
+      <button type="button" (click)="logout()" class="px-2.5 py-1.5 sm:px-3 rounded-lg text-xs font-medium text-slate-500 hover:text-alert hover:bg-red-50 transition-all whitespace-nowrap">
+        Déconnexion
+      </button>
+    </div>
+  </div>
+  <div class="h-[3px] w-full bg-[repeating-linear-gradient(90deg,#0c4a6e_0px,#0c4a6e_24px,#d97706_24px,#d97706_48px,#15803d_48px,#15803d_72px)] opacity-85"></div>
+</header>
+
+
+@if (activeTab() === 'MAP') {
+  <div class="flex flex-col lg:flex-row h-[calc(100vh-4.25rem)] overflow-hidden bg-surface font-sans">
+
+   
+    <aside class="w-full lg:w-[410px] h-full overflow-y-auto p-5 bg-surface border-r border-slate-200/80">
+      <div class="mb-4">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-success text-[10px] font-bold uppercase tracking-wider">
+          <span class="w-1.5 h-1.5 rounded-full bg-success"></span> Signalement Citoyen
+        </span>
+        <h1 class="font-heading text-xl font-bold text-brand mt-1.5">Signaler un problème</h1>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-4">
+      
+<div>
+  <div class="flex items-center justify-between mb-1.5">
+    <label class="block text-xs font-semibold text-brand">Photo</label>
+    @if (previewUrl()) {
+      <button
+        type="button"
+        (click)="clearPhoto()"
+        class="text-[11px] font-semibold text-red-600 hover:underline"
+      >
+        ✕ Supprimer
+      </button>
+    }
+  </div>
+
+  
+  <label class="relative flex flex-col items-center justify-center h-28 rounded-xl border-2 border-dashed border-slate-200 hover:border-brand/40 bg-slate-50/50 cursor-pointer overflow-hidden transition-all">
+    @if (previewUrl()) {
+      <img [src]="previewUrl()" alt="Aperçu" class="w-full h-full object-cover" />
+    } @else {
+      <span class="text-xs font-semibold text-brand"> Importer une photo</span>
+      <span class="text-[10px] text-slate-400 mt-0.5">JPG, PNG · Max 10 Mo</span>
+    }
+    <input type="file" accept="image/*" (change)="onFileSelected($event)" class="hidden" />
+  </label>
+
+  
+  <input
+    #cameraInput
+    type="file"
+    accept="image/*"
+    capture="environment"
+    (change)="onFileSelected($event)"
+    class="hidden"
+  />
+  <button
+    type="button"
+    (click)="cameraInput.click()"
+    class="mt-2 w-full py-2 px-3 rounded-xl border border-slate-200 hover:border-brand/40 bg-white hover:bg-slate-50 text-xs font-semibold text-brand transition-all flex items-center justify-center gap-1.5"
+  >
+    <span>📷</span>
+    <span>Prendre une photo (Caméra)</span>
+  </button>
+</div>
+
+       
+        <div>
+          <label class="block text-xs font-semibold text-brand mb-1.5">Catégorie</label>
+          <div class="grid grid-cols-2 gap-2">
+            @for (cat of categories; track cat.id) {
+              <button type="button" (click)="selectedCategory.set(cat.id)"
+                      [class]="selectedCategory() === cat.id ? 'bg-brand text-white border-brand shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'"
+                      class="py-2 px-3 rounded-xl border text-xs font-medium text-left flex items-center gap-2 transition-all">
+                <span>{{ cat.icon }}</span> {{ cat.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+       
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-semibold text-brand">Localisation</label>
+            <span class="text-[10px] font-mono text-success">{{ latitude() }}, {{ longitude() }}</span>
+          </div>
+          <input type="text" [(ngModel)]="address"
+                 class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:bg-white focus:border-brand focus:outline-none"
+                 placeholder="Cliquez sur la carte à droite..." />
+        </div>
+
+        
+        <div>
+          <label class="block text-xs font-semibold text-brand mb-1">Description</label>
+          <textarea rows="2" [(ngModel)]="description"
+                    class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:bg-white focus:border-brand focus:outline-none resize-none"
+                    placeholder="Décrivez brièvement le problème..."></textarea>
+        </div>
+
+        <button type="button" (click)="submitReport()" [disabled]="!description().trim() || submitting()"
+                class="w-full py-2.5 rounded-xl bg-accent hover:bg-amber-700 disabled:opacity-40 text-white font-heading font-semibold text-sm shadow-sm transition-all">
+          {{ submitting() ? 'Envoi...' : 'Publier le signalement' }}
+        </button>
+      </div>
+
+      
+
+    </aside>
+
+    
+    <section class="relative flex-1 h-full bg-[#e5e9ec]">
+    <div
+  id="maplibre-container"
+  class="w-full h-[50vh] min-h-[420px] lg:h-[calc(100vh-5rem)] rounded-2xl overflow-hidden"
+></div>
+
+      
+      <div class="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur rounded-xl px-3.5 py-2 shadow-sm border border-slate-100 flex items-center gap-4 text-[11px] font-medium text-slate-600">
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> En attente</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-600"></span> En cours</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Résolu</span>
+      </div>
+
+      <div class="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur rounded-xl px-3.5 py-2 shadow-sm border border-slate-100 text-xs text-brand font-medium pointer-events-none">
+        📍 Cliquez sur la carte pour positionner le signalement à Fès
+      </div>
+    </section>
+  </div>
+}
+
+
+@if (activeTab() === 'MY_REPORTS') {
+  <div class="min-h-[calc(100vh-4.25rem)] bg-surface py-8 px-6 font-sans">
+    <div class="max-w-5xl mx-auto">
+
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h1 class="font-heading text-2xl font-bold text-brand">Mes Signalements</h1>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" (click)="activeFilter.set('ALL')" [class]="activeFilter() === 'ALL' ? 'bg-brand text-white' : 'bg-white text-slate-600'" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200">Tous ({{ stats().total }})</button>
+          <button type="button" (click)="activeFilter.set('EN_ATTENTE')" [class]="activeFilter() === 'EN_ATTENTE' ? 'bg-amber-500 text-white' : 'bg-white text-slate-600'" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200">En attente ({{ stats().pending }})</button>
+          <button type="button" (click)="activeFilter.set('EN_COURS')" [class]="activeFilter() === 'EN_COURS' ? 'bg-sky-600 text-white' : 'bg-white text-slate-600'" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200">En cours ({{ stats().inProgress }})</button>
+          <button type="button" (click)="activeFilter.set('RESOLU')" [class]="activeFilter() === 'RESOLU' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200">Résolus ({{ stats().resolved }})</button>
+        </div>
+      </div>
+
+      @if (displayedIncidents().length > 0) {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          @for (item of displayedIncidents(); track item.id) {
+            <div class="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm flex flex-col">
+              <img [src]="item.photoUrl" [alt]="item.title" class="h-40 w-full object-cover" />
+              <div class="p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between text-[10px] font-bold uppercase mb-1.5">
+                    <span class="px-2 py-0.5 rounded-full bg-sky-50 text-brand">{{ item.status }}</span>
+                    <span class="text-slate-400">{{ item.dateLabel }}</span>
+                  </div>
+                  <h3 class="font-heading font-bold text-sm text-brand mb-1">{{ item.title }}</h3>
+                  <p class="text-xs text-slate-500 line-clamp-2 mb-3">{{ item.description }}</p>
+                </div>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                  <span class="truncate">📍 {{ item.address }}</span>
+                  <span class="font-bold text-brand shrink-0">▲ {{ item.upvotes }}</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="bg-white rounded-2xl border border-dashed border-slate-200 p-10 text-center space-y-2 shadow-sm">
+          
+          <p class="text-sm font-bold text-brand">{{ getEmptyIncidentsMessage().title }}</p>
+          <p class="text-xs text-slate-500">{{ getEmptyIncidentsMessage().subtitle }}</p>
+          @if (activeFilter() !== 'ALL' || searchQuery().trim()) {
+            <button
+              type="button"
+              (click)="activeFilter.set('ALL'); searchQuery.set('')"
+              class="mt-2 inline-flex items-center px-3.5 py-1.5 rounded-xl bg-brand text-white text-xs font-semibold hover:opacity-90 transition"
+            >
+              Réinitialiser les filtres
+            </button>
+          } @else {
+            <button
+              type="button"
+              (click)="switchTab('MAP')"
+              class="mt-2 inline-flex items-center px-3.5 py-1.5 rounded-xl bg-brand text-white text-xs font-semibold hover:opacity-90 transition"
+            >
+              Créer un signalement sur la carte
+            </button>
+          }
+        </div>
+      }
+
+    </div>
+  </div>
+}
+
+
+@if (activeTab() === 'PROPOSALS') {
+  <div class="min-h-[calc(100vh-4.25rem)] bg-surface py-8 px-6 font-sans">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Formulaire + Mini-Carte (5 colonnes) -->
+      <div class="lg:col-span-5">
+        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+          <h2 class="font-heading font-bold text-lg text-brand">Proposer une idée pour Fès</h2>
+
+          <div>
+            <label class="block text-xs font-semibold text-brand mb-1">Titre</label>
+            <input type="text" [(ngModel)]="proposalTitle"
+                   class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:border-brand focus:outline-none"
+                   placeholder="Ex: Espace sportif à Jnan Sbil" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-brand mb-1.5">Thème</label>
+            <div class="grid grid-cols-2 gap-2">
+              @for (t of proposalThemes; track t.id) {
+                <button type="button" (click)="proposalTheme.set(t.id)"
+                        [class]="proposalTheme() === t.id ? 'bg-brand text-white border-brand' : 'bg-white text-slate-600 border-slate-200'"
+                        class="py-1.5 px-3 rounded-xl border text-xs font-medium text-left transition-all">
+                  {{ t.label }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Sélection du lieu via Carte -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-xs font-semibold text-brand">Lieu / Quartier (cliquez sur la carte)</label>
+              <span class="text-[10px] font-mono text-slate-400">{{ proposalLat() }}, {{ proposalLng() }}</span>
+            </div>
+            <div id="proposal-map-container" class="w-full h-36 rounded-xl overflow-hidden border border-slate-200 mb-2"></div>
+            <input type="text" [(ngModel)]="proposalAddress" readonly
+                   class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-brand mb-1">Description</label>
+            <textarea rows="2" [(ngModel)]="proposalDescription"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white focus:border-brand focus:outline-none resize-none"
+                      placeholder="Votre idée en quelques mots..."></textarea>
+          </div>
+
+          <button type="button" (click)="submitProposal()"
+                  [disabled]="!proposalTitle().trim() || !proposalDescription().trim()"
+                  class="w-full py-2.5 rounded-xl bg-accent hover:bg-amber-700 disabled:opacity-40 text-white font-heading font-semibold text-sm transition-all">
+            Publier la proposition
+          </button>
+        </div>
+      </div>
+
+      
+      <div class="lg:col-span-7 space-y-4">
+        @for (prop of proposals(); track prop.id) {
+          <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-start justify-between gap-4">
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-2 text-[11px]">
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-accent font-semibold">{{ getThemeLabel(prop.theme) }}</span>
+                <span class="text-slate-400">📍 {{ prop.address }}</span>
+              </div>
+              <h3 class="font-heading font-bold text-base text-brand">{{ prop.title }}</h3>
+              <p class="text-xs text-slate-600 leading-relaxed">{{ prop.description }}</p>
+              <p class="text-[11px] text-slate-400 pt-1">Par <strong>{{ prop.authorName }}</strong> · {{ prop.dateLabel }}</p>
+            </div>
+
+            <button (click)="toggleProposalVote(prop)"
+                    [class]="prop.votedByMe ? 'bg-brand text-white border-brand' : 'bg-slate-50 text-brand border-slate-200 hover:bg-sky-50'"
+                    class="px-3.5 py-2 rounded-xl border flex flex-col items-center shrink-0 transition-all">
+              <span class="text-xs">▲</span>
+              <span class="font-heading font-bold text-sm">{{ prop.votes }}</span>
+            </button>
+          </div>
+        }
+      </div>
+
+    </div>
+  </div>
+}

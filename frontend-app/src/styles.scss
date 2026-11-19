@@ -1,6 +1,6 @@
 /* 1. Import des polices Google Fonts (Outfit & Inter) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap');
-
+@import 'maplibre-gl/dist/maplibre-gl.css';
 /* 2. Directives obligatoires Tailwind CSS */
 @tailwind base;
 @tailwind components;
@@ -25,4 +25,10 @@ body {
 
 .animate-slide-top {
   animation: slideDownFade 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.fes-zellige-bg {
+  background-color: #fafaf9;
+  background-image: radial-gradient(circle at 2px 2px, rgba(12, 74, 110, 0.06) 1.5px, transparent 0),
+                    radial-gradient(circle at 14px 14px, rgba(180, 83, 9, 0.06) 1.5px, transparent 0);
+  background-size: 24px 24px;
 }
