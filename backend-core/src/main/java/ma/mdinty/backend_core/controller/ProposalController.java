@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/proposals")
@@ -34,7 +35,7 @@ public class ProposalController {
         proposal.setDescription(body.getDescription());
         proposal.setAuthorName(body.getAuthorName() != null ? body.getAuthorName() : "Citoyen Fès");
         proposal.setUserId(body.getUserId());
-        proposal.setStatus("EN_EXAMEN");;
+        proposal.setStatus("EN_EXAMEN");
 
         if (body.getUserId() != null) {
             proposal.getVoterIds().add(body.getUserId());
@@ -64,6 +65,23 @@ public class ProposalController {
                         int current = proposal.getVotes() != null ? proposal.getVotes() : 0;
                         proposal.setVotes(current + 1);
                     }
+                    return ResponseEntity.ok(proposalRepository.save(proposal));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Proposal> updateProposalStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body
+    ) {
+        String newStatus = body.get("status");
+        if (newStatus == null || newStatus.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return proposalRepository.findById(id)
+                .map(proposal -> {
+                    proposal.setStatus(newStatus.trim().toUpperCase());
                     return ResponseEntity.ok(proposalRepository.save(proposal));
                 })
                 .orElse(ResponseEntity.notFound().build());

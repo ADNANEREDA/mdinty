@@ -8,7 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/incidents")
@@ -60,27 +62,99 @@ public class IncidentController {
     }
 
     @PutMapping("/{id}/upvote")
-public ResponseEntity<Incident> upvoteIncident(
-        @PathVariable Long id,
-        @RequestParam(value = "userId", required = false) Long userId
-) {
-    return incidentRepository.findById(id)
-            .map(incident -> {
-                if (userId != null) {
-                    if (incident.getVoterIds().contains(userId)) {
-                        // L'utilisateur a déjà voté : on annule son vote (toggle)
-                        incident.getVoterIds().remove(userId);
+    public ResponseEntity<Incident> upvoteIncident(
+            @PathVariable Long id,
+            @RequestParam(value = "userId", required = false) Long userId
+    ) {
+        return incidentRepository.findById(id)
+                .map(incident -> {
+                    if (userId != null) {
+                        if (incident.getVoterIds().contains(userId)) {
+                            incident.getVoterIds().remove(userId);
+                        } else {
+                            incident.getVoterIds().add(userId);
+                        }
+                        incident.setUpvotes(incident.getVoterIds().size());
                     } else {
-                        // Nouveau vote unique pour cet utilisateur
-                        incident.getVoterIds().add(userId);
+                        int currentVotes = incident.getUpvotes() != null ? incident.getUpvotes() : 0;
+                        incident.setUpvotes(currentVotes + 1);
                     }
-                    incident.setUpvotes(incident.getVoterIds().size());
-                } else {
-                    int currentVotes = incident.getUpvotes() != null ? incident.getUpvotes() : 0;
-                    incident.setUpvotes(currentVotes + 1);
-                }
-                return ResponseEntity.ok(incidentRepository.save(incident));
-            })
-            .orElse(ResponseEntity.notFound().build());
-}
+                    return ResponseEntity.ok(incidentRepository.save(incident));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Incident> updateStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body
+    ) {
+        String newStatus = body.get("status");
+        if (newStatus == null || newStatus.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return incidentRepository.findById(id)
+                .map(incident -> {
+                    String normalized = newStatus.trim().toUpperCase();
+                    incident.setStatus(normalized);
+
+                    if ("EN_COURS".equals(normalized) && incident.getAssignedAt() == null) {
+                        incident.setAssignedAt(LocalDateTime.now());
+                    }
+
+                    if ("RESOLU".equals(normalized)) {
+                        incident.setResolvedAt(LocalDateTime.now());
+                        if (body.get("resolutionNote") != null && !body.get("resolutionNote").isBlank()) {
+                            incident.setResolutionNote(body.get("resolutionNote").trim());
+                        }
+                        if (body.get("resolutionPhotoUrl") != null && !body.get("resolutionPhotoUrl").isBlank()) {
+                            incident.setResolutionPhotoUrl(body.get("resolutionPhotoUrl").trim());
+                        }
+                    }
+
+                    return ResponseEntity.ok(incidentRepository.save(incident));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/assign")
+    public ResponseEntity<Incident> assignTeam(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body
+    ) {
+        String team = body.get("assignedTeam");
+        String teamLabel = body.get("assignedTeamLabel");
+        return incidentRepository.findById(id)
+                .map(incident -> {
+                    incident.setAssignedTeam(team);
+                    incident.setAssignedTeamLabel(teamLabel);
+                    if (incident.getAssignedAt() == null) {
+                        incident.setAssignedAt(LocalDateTime.now());
+                    }
+                    if ("EN_ATTENTE".equalsIgnoreCase(incident.getStatus())) {
+                        incident.setStatus("EN_COURS");
+                    }
+                    return ResponseEntity.ok(incidentRepository.save(incident));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // Endpoint prêt pour l'équipe terrain (MEMBRE_EQUIPE) : envoi photo après travaux + cahier des charges au Chef
+    @PostMapping(value = "/{id}/field-report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Incident> submitFieldReport(
+            @PathVariable Long id,
+            @RequestParam("resolutionNote") String resolutionNote,
+            @RequestParam(value = "photo", required = false) MultipartFile photo
+    ) {
+        return incidentRepository.findById(id)
+                .map(incident -> {
+                    incident.setResolutionNote(resolutionNote);
+                    if (photo != null && !photo.isEmpty()) {
+                        String afterPhotoUrl = minioService.uploadPhoto(photo);
+                        incident.setResolutionPhotoUrl(afterPhotoUrl);
+                    }
+                    return ResponseEntity.ok(incidentRepository.save(incident));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

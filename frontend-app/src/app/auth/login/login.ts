@@ -54,7 +54,7 @@ export class Login {
             alert(`Bienvenue Admin ${user.prenom} ${user.nom} !`);
             break;
           case 'CHEF_SERVICE':
-            alert(`Bienvenue Chef de Service (${user.serviceName}) : ${user.prenom} ${user.nom} !`);
+            this.router.navigate(['/chef/dashboard']);
             break;
           case 'MEMBRE_EQUIPE':
             alert(`Bienvenue Membre d'équipe (${user.serviceName}) : ${user.prenom} ${user.nom} !`);

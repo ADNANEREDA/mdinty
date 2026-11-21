@@ -1,0 +1,44 @@
+@keyframes chefFadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes chefModalZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes chefToastPop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chef-card-anim {
+  animation: chefFadeSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.chef-modal-anim {
+  animation: chefModalZoomIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.chef-toast-anim {
+  animation: chefToastPop 0.22s ease-out both;
+}
