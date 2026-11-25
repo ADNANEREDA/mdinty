@@ -30,6 +30,8 @@ import {
   mapCategoryToService
 } from './chef.model';
 
+export type ChefQueueTab = 'ACTIVE' | 'TO_VERIFY' | 'SPAM';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -60,6 +62,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
   chefServiceKey = signal<ServiceKey>('ELECTRICITY_WATER');
   viewMode = signal<'GRID' | 'MAP' | 'STATS'>('GRID');
+  queueTab = signal<ChefQueueTab>('ACTIVE');
   statusFilter = signal<IncidentStatus | 'ALL' | 'URGENT'>('ALL');
   sortBy = signal<IncidentSortKey>('URGENCY');
   searchQuery = signal('');
@@ -101,23 +104,47 @@ export class Dashboard implements OnInit, OnDestroy {
       .filter(inc => mapCategoryToService(inc.category) === svc)
       .map(inc => {
         const status = (inc.status as IncidentStatus) || 'EN_ATTENTE';
+        const aiStatus = (inc.aiStatus || '').toUpperCase().trim();
+        const isSpam = aiStatus === 'SPAM';
+
         const createdMs = inc.createdAt ? new Date(inc.createdAt).getTime() : now;
         const hoursElapsed = (now - createdMs) / (1000 * 60 * 60);
-        const isSlaBreached = status === 'EN_ATTENTE' && hoursElapsed > 48;
+        const isSlaBreached = !isSpam && status === 'EN_ATTENTE' && hoursElapsed > 48;
 
-        const aiLabel = (inc.aiSeverityLabel || '').toUpperCase();
+        const aiSev = (inc.aiSeverity || inc.aiSeverityLabel || '').toUpperCase().trim();
         const aiScore = inc.aiSeverityScore ?? 0;
+        const pScore = inc.priorityScore;
+
         const isCritique =
+          !isSpam &&
           status !== 'RESOLU' &&
-          (aiLabel === 'CRITIQUE' || aiScore >= 0.8 || isSlaBreached || (inc.upvotes ?? 0) >= 5);
+          (aiSev === 'CRITIQUE' ||
+            aiSev === 'URGENTE' ||
+            (typeof pScore === 'number' && pScore >= 10) ||
+            aiScore >= 0.8 ||
+            isSlaBreached ||
+            (inc.upvotes ?? 0) >= 5);
+
         const isEleve =
+          !isSpam &&
           !isCritique &&
           status !== 'RESOLU' &&
-          (aiLabel === 'ELEVE' || aiScore >= 0.55 || (inc.upvotes ?? 0) >= 3);
+          (aiSev === 'ELEVE' ||
+            aiSev === 'ELEVEE' ||
+            (typeof pScore === 'number' && pScore >= 6) ||
+            aiScore >= 0.55 ||
+            (inc.upvotes ?? 0) >= 3);
 
         let urgencyReason = '';
-        if (aiLabel === 'CRITIQUE' || aiScore >= 0.8) {
-          urgencyReason = 'Gravité Critique (CV)';
+        if (isSpam) {
+          urgencyReason = '';
+        } else if (
+          aiSev === 'CRITIQUE' ||
+          aiSev === 'URGENTE' ||
+          (typeof pScore === 'number' && pScore >= 10) ||
+          aiScore >= 0.8
+        ) {
+          urgencyReason = typeof pScore === 'number' ? `Priorité IA (${pScore})` : 'Gravité Critique (CV)';
         } else if (isSlaBreached) {
           urgencyReason = 'SLA > 48h dépassé';
         } else if ((inc.upvotes ?? 0) >= 5) {
@@ -129,6 +156,14 @@ export class Dashboard implements OnInit, OnDestroy {
         return {
           ...inc,
           status,
+          aiStatus: inc.aiStatus ?? null,
+          aiSeverity: inc.aiSeverity ?? null,
+          priorityScore: inc.priorityScore ?? null,
+          aiReason: inc.aiReason ?? null,
+          aiConfidence: inc.aiConfidence ?? null,
+          aiCategoryConsistent: inc.aiCategoryConsistent ?? null,
+          duplicateCount: inc.duplicateCount ?? null,
+          parentIncidentId: inc.parentIncidentId ?? null,
           isSlaBreached,
           isUrgent: isCritique || isEleve,
           urgencyLevel: isCritique ? ('CRITIQUE' as const) : isEleve ? ('ELEVE' as const) : ('NORMAL' as const),
@@ -140,14 +175,46 @@ export class Dashboard implements OnInit, OnDestroy {
       });
   });
 
+  // File principale : uniquement disponibles / validés (hors SPAM, DOUBLON, A_VERIFIER)
+  activeServiceIncidents = computed(() =>
+    this.serviceIncidents().filter(inc => {
+      const aiSt = (inc.aiStatus || '').toUpperCase().trim();
+      return aiSt !== 'SPAM' && aiSt !== 'A_VERIFIER' && aiSt !== 'DOUBLON';
+    })
+  );
+
+  // Boîte "À vérifier"
+  toVerifyIncidents = computed(() =>
+    this.serviceIncidents().filter(
+      inc => (inc.aiStatus || '').toUpperCase().trim() === 'A_VERIFIER'
+    )
+  );
+
+  // Boîte "Spam"
+  spamIncidents = computed(() =>
+    this.serviceIncidents().filter(
+      inc => (inc.aiStatus || '').toUpperCase().trim() === 'SPAM'
+    )
+  );
+
   filteredIncidents = computed(() => {
+    const tab = this.queueTab();
     const st = this.statusFilter();
     const sort = this.sortBy();
     const q = this.searchQuery().toLowerCase().trim();
 
-    const filtered = this.serviceIncidents().filter(inc => {
+    const baseList =
+      tab === 'SPAM'
+        ? this.spamIncidents()
+        : tab === 'TO_VERIFY'
+        ? this.toVerifyIncidents()
+        : this.activeServiceIncidents();
+
+    const filtered = baseList.filter(inc => {
       const matchStatus =
-        st === 'ALL'
+        tab !== 'ACTIVE'
+          ? true
+          : st === 'ALL'
           ? true
           : st === 'URGENT'
           ? Boolean(inc.isUrgent)
@@ -158,6 +225,7 @@ export class Dashboard implements OnInit, OnDestroy {
         (inc.title || '').toLowerCase().includes(q) ||
         (inc.address || '').toLowerCase().includes(q) ||
         (inc.description || '').toLowerCase().includes(q) ||
+        (inc.aiReason || '').toLowerCase().includes(q) ||
         getCategoryFrenchLabel(inc.category).toLowerCase().includes(q);
 
       return matchStatus && matchSearch;
@@ -170,6 +238,15 @@ export class Dashboard implements OnInit, OnDestroy {
       if (sort === 'RECENT') {
         return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
       }
+
+      const isSpamA = (a.aiStatus || '').toUpperCase() === 'SPAM';
+      const isSpamB = (b.aiStatus || '').toUpperCase() === 'SPAM';
+      if (isSpamA !== isSpamB) return isSpamA ? 1 : -1;
+
+      const scoreA = a.priorityScore ?? -1;
+      const scoreB = b.priorityScore ?? -1;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+
       const weight = (x: ServiceIncident) =>
         x.urgencyLevel === 'CRITIQUE' ? 3 : x.urgencyLevel === 'ELEVE' ? 2 : 1;
       const diff = weight(b) - weight(a);
@@ -179,7 +256,7 @@ export class Dashboard implements OnInit, OnDestroy {
   });
 
   kpis = computed(() => {
-    const list = this.serviceIncidents();
+    const list = this.activeServiceIncidents();
     const resolvedWithDates = list.filter(i => i.status === 'RESOLU' && i.createdAt && i.resolvedAt);
 
     let mttrLabel = '—';
@@ -211,7 +288,7 @@ export class Dashboard implements OnInit, OnDestroy {
   });
 
   districtStats = computed(() => {
-    const list = this.serviceIncidents();
+    const list = this.activeServiceIncidents();
     const total = list.length || 1;
     const counts: Record<string, { total: number; resolved: number; urgent: number }> = {};
 
@@ -441,6 +518,11 @@ export class Dashboard implements OnInit, OnDestroy {
               this.selectedTeams[inc.id] = (inc.assignedTeam as TeamKey) || defaultTeam;
             }
           }
+          if (this.selectedIncident()) {
+            const updatedSelected =
+              this.serviceIncidents().find(i => i.id === this.selectedIncident()!.id) || null;
+            this.selectedIncident.set(updatedSelected);
+          }
           this.loading.set(false);
           if (this.viewMode() === 'MAP') {
             setTimeout(() => this.initMap(), 80);
@@ -484,6 +566,51 @@ export class Dashboard implements OnInit, OnDestroy {
     this.selectedIncident.set(null);
     this.selectedProposal.set(null);
     this.showTreatmentPanel.set(false);
+  }
+
+  // Valide un incident "À vérifier" côté backend pour qu'il passe dans la file principale "À traiter"
+  approveForTreatment(incidentId: number, event?: Event): void {
+    event?.stopPropagation();
+    const reason = 'Validé manuellement par le chef de service';
+
+    this.chefService.updateIncidentAiStatus(incidentId, 'VALIDATED', reason).subscribe({
+      next: (updated) => {
+        this.incidents.update(list =>
+          list.map(item =>
+            item.id === incidentId
+              ? {
+                  ...item,
+                  ...updated,
+                  aiStatus: updated?.aiStatus || 'VALIDATED',
+                  aiReason: updated?.aiReason || reason
+                }
+              : item
+          )
+        );
+        if (this.selectedIncident()?.id === incidentId) {
+          const refreshed = this.serviceIncidents().find(i => i.id === incidentId) || null;
+          this.selectedIncident.set(refreshed);
+        }
+        this.triggerToast('Signalement envoyé vers la file de traitement', 'success');
+      },
+      error: () => this.triggerToast('Erreur lors de la validation du signalement', 'info')
+    });
+  }
+
+  // Supprime définitivement un incident côté backend (ex. boîte Spam ou rejet depuis boîte À vérifier)
+  deleteIncident(incidentId: number, event?: Event): void {
+    event?.stopPropagation();
+
+    this.chefService.deleteIncident(incidentId).subscribe({
+      next: () => {
+        this.incidents.update(list => list.filter(item => item.id !== incidentId));
+        if (this.selectedIncident()?.id === incidentId) {
+          this.closeDetails();
+        }
+        this.triggerToast('Signalement supprimé définitivement', 'info');
+      },
+      error: () => this.triggerToast('Erreur lors de la suppression du signalement', 'info')
+    });
   }
 
   validateAndResolve(incidentId: number, event?: Event): void {
@@ -565,6 +692,36 @@ export class Dashboard implements OnInit, OnDestroy {
       },
       error: () => this.triggerToast('Erreur lors de la mise à jour de la proposition', 'info')
     });
+  }
+
+  getAiStatusBadgeClass(aiStatus?: string | null): string {
+    switch ((aiStatus || '').toUpperCase().trim()) {
+      case 'VALIDATED':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'DOUBLON':
+        return 'bg-amber-50 text-amber-800 border-amber-200';
+      case 'A_VERIFIER':
+        return 'bg-orange-50 text-orange-800 border-orange-200';
+      case 'SPAM':
+        return 'bg-red-50 text-red-700 border-red-200';
+      default:
+        return 'bg-slate-100 text-slate-600 border-slate-200';
+    }
+  }
+
+  getAiStatusLabel(aiStatus?: string | null): string {
+    switch ((aiStatus || '').toUpperCase().trim()) {
+      case 'VALIDATED':
+        return 'Validé IA';
+      case 'DOUBLON':
+        return 'Doublon IA';
+      case 'A_VERIFIER':
+        return 'À vérifier';
+      case 'SPAM':
+        return 'Hors-sujet / Spam';
+      default:
+        return aiStatus || 'Non analysé';
+    }
   }
 
   onPhotoError(event: Event): void {

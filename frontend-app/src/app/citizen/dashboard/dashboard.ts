@@ -674,4 +674,14 @@ clearPhoto(): void {
     subtitle: 'Sois le premier citoyen à signaler un incident sur la carte.'
   };
 }
+
+selectedReport = signal<any | null>(null);
+
+  openReportDetails(item: any): void {
+    this.selectedReport.set(item);
+  }
+
+  closeReportDetails(): void {
+    this.selectedReport.set(null);
+  }
 }

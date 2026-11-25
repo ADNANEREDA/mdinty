@@ -2,6 +2,7 @@ package ma.mdinty.backend_core.controller;
 
 import ma.mdinty.backend_core.entity.Incident;
 import ma.mdinty.backend_core.repository.IncidentRepository;
+import ma.mdinty.backend_core.service.AiModerationService;
 import ma.mdinty.backend_core.service.MinioService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,15 +20,21 @@ public class IncidentController {
 
     private final IncidentRepository incidentRepository;
     private final MinioService minioService;
+    private final AiModerationService aiModerationService;
 
-    public IncidentController(IncidentRepository incidentRepository, MinioService minioService) {
+    public IncidentController(
+            IncidentRepository incidentRepository,
+            MinioService minioService,
+            AiModerationService aiModerationService
+    ) {
         this.incidentRepository = incidentRepository;
         this.minioService = minioService;
+        this.aiModerationService = aiModerationService;
     }
 
     @GetMapping
     public List<Incident> getAllIncidents() {
-        return incidentRepository.findAll();
+        return incidentRepository.findAllByOrderByCreatedAtDesc();
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -58,6 +65,7 @@ public class IncidentController {
         }
 
         Incident saved = incidentRepository.save(incident);
+        aiModerationService.moderateIncidentAsync(saved.getId());
         return ResponseEntity.ok(saved);
     }
 
@@ -156,5 +164,33 @@ public class IncidentController {
                     return ResponseEntity.ok(incidentRepository.save(incident));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+    @PutMapping("/{id}/ai-status")
+    public ResponseEntity<Incident> updateAiStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body
+    ) {
+        String newAiStatus = body.get("aiStatus");
+        if (newAiStatus == null || newAiStatus.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return incidentRepository.findById(id)
+                .map(incident -> {
+                    incident.setAiStatus(newAiStatus.trim().toUpperCase());
+                    if (body.get("aiReason") != null && !body.get("aiReason").isBlank()) {
+                        incident.setAiReason(body.get("aiReason").trim());
+                    }
+                    return ResponseEntity.ok(incidentRepository.save(incident));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteIncident(@PathVariable Long id) {
+        if (!incidentRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        incidentRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
