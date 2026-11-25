@@ -22,6 +22,9 @@ export interface FieldTeam {
   service: Exclude<ServiceKey, 'PROPOSALS'>;
 }
 
+export type AiIncidentStatus = 'VALIDATED' | 'DOUBLON' | 'A_VERIFIER' | 'SPAM' | string;
+export type AiSeverityLevel = 'FAIBLE' | 'MOYENNE' | 'ELEVEE' | 'URGENTE' | string;
+
 export interface ServiceIncident {
   id: number;
   title: string;
@@ -33,15 +36,27 @@ export interface ServiceIncident {
   longitude: number;
   photoUrl?: string;
   upvotes: number;
+  userId?: number | null;
+  voterIds?: number[];
   createdAt?: string;
-  assignedAt?: string;
-  resolvedAt?: string;
-  resolutionNote?: string;
-  resolutionPhotoUrl?: string;
-  // Préparé pour le module Computer Vision d'Othamne
-  aiSeverityScore?: number;
-  aiSeverityLabel?: 'FAIBLE' | 'MODERE' | 'ELEVE' | 'CRITIQUE' | string;
-  // Champs calculés côté UI
+  assignedAt?: string | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
+  resolutionPhotoUrl?: string | null;
+
+  // Champs IA & priorité renvoyés par le backend
+  priorityScore?: number | null;
+  aiStatus?: AiIncidentStatus | null;
+  aiSeverity?: AiSeverityLevel | null;
+  aiReason?: string | null;
+  aiConfidence?: number | null;
+  aiCategoryConsistent?: boolean | null;
+  duplicateCount?: number | null;
+  parentIncidentId?: number | null;
+
+  // Compatibilité / anciens champs UI
+  aiSeverityScore?: number | null;
+  aiSeverityLabel?: string | null;
   dateLabel?: string;
   assignedAtLabel?: string;
   resolvedAtLabel?: string;
@@ -49,10 +64,9 @@ export interface ServiceIncident {
   isUrgent?: boolean;
   urgencyLevel?: 'CRITIQUE' | 'ELEVE' | 'NORMAL';
   urgencyReason?: string;
-  assignedTeam?: TeamKey | string;
-  assignedTeamLabel?: string;
+  assignedTeam?: TeamKey | string | null;
+  assignedTeamLabel?: string | null;
 }
-
 export interface ServiceProposal {
   id: number;
   title: string;

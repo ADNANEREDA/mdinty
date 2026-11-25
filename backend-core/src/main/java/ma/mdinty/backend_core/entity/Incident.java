@@ -50,7 +50,7 @@ public class Incident {
     private String assignedTeamLabel;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
@@ -64,11 +64,40 @@ public class Incident {
     @Column(name = "resolution_photo_url", length = 500)
     private String resolutionPhotoUrl;
 
+    // --- Champs IA existants ---
     @Column(name = "ai_severity_score")
     private Double aiSeverityScore;
 
     @Column(name = "ai_severity_label", length = 50)
     private String aiSeverityLabel;
+
+    // --- Nouveaux champs IA : Cohérence, Gravité, Priorité, Doublons & Fallback ---
+    @Column(name = "ai_status", length = 30)
+    private String aiStatus = "PENDING_AI"; // PENDING_AI | VALIDATED | SPAM | DOUBLON | A_VERIFIER
+
+    @Column(name = "ai_confidence")
+    private Double aiConfidence;
+
+    @Column(name = "ai_severity", length = 20)
+    private String aiSeverity = "MOYENNE"; // FAIBLE | MOYENNE | URGENTE
+
+    @Column(name = "ai_category_consistent")
+    private Boolean aiCategoryConsistent = true;
+
+    @Column(name = "ai_reason", length = 500)
+    private String aiReason;
+
+    @Column(name = "priority_score")
+    private Integer priorityScore = 5;
+
+    @Column(name = "duplicate_count")
+    private Integer duplicateCount = 1;
+
+    @Column(name = "parent_incident_id")
+    private Long parentIncidentId;
+
+    @Column(name = "ai_embedding", columnDefinition = "TEXT")
+    private String aiEmbeddingJson;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "incident_voters", joinColumns = @JoinColumn(name = "incident_id"))
@@ -76,6 +105,28 @@ public class Incident {
     private Set<Long> voterIds = new HashSet<>();
 
     public Incident() {
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (aiStatus == null) {
+            aiStatus = "PENDING_AI";
+        }
+        if (aiSeverity == null) {
+            aiSeverity = "MOYENNE";
+        }
+        if (aiCategoryConsistent == null) {
+            aiCategoryConsistent = true;
+        }
+        if (priorityScore == null) {
+            priorityScore = 5;
+        }
+        if (duplicateCount == null) {
+            duplicateCount = 1;
+        }
     }
 
     public Long getId() { return id; }
@@ -118,6 +169,7 @@ public class Incident {
     public void setAssignedTeamLabel(String assignedTeamLabel) { this.assignedTeamLabel = assignedTeamLabel; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public LocalDateTime getAssignedAt() { return assignedAt; }
     public void setAssignedAt(LocalDateTime assignedAt) { this.assignedAt = assignedAt; }
@@ -136,6 +188,33 @@ public class Incident {
 
     public String getAiSeverityLabel() { return aiSeverityLabel; }
     public void setAiSeverityLabel(String aiSeverityLabel) { this.aiSeverityLabel = aiSeverityLabel; }
+
+    public String getAiStatus() { return aiStatus; }
+    public void setAiStatus(String aiStatus) { this.aiStatus = aiStatus; }
+
+    public Double getAiConfidence() { return aiConfidence; }
+    public void setAiConfidence(Double aiConfidence) { this.aiConfidence = aiConfidence; }
+
+    public String getAiSeverity() { return aiSeverity; }
+    public void setAiSeverity(String aiSeverity) { this.aiSeverity = aiSeverity; }
+
+    public Boolean getAiCategoryConsistent() { return aiCategoryConsistent; }
+    public void setAiCategoryConsistent(Boolean aiCategoryConsistent) { this.aiCategoryConsistent = aiCategoryConsistent; }
+
+    public String getAiReason() { return aiReason; }
+    public void setAiReason(String aiReason) { this.aiReason = aiReason; }
+
+    public Integer getPriorityScore() { return priorityScore; }
+    public void setPriorityScore(Integer priorityScore) { this.priorityScore = priorityScore; }
+
+    public Integer getDuplicateCount() { return duplicateCount; }
+    public void setDuplicateCount(Integer duplicateCount) { this.duplicateCount = duplicateCount; }
+
+    public Long getParentIncidentId() { return parentIncidentId; }
+    public void setParentIncidentId(Long parentIncidentId) { this.parentIncidentId = parentIncidentId; }
+
+    public String getAiEmbeddingJson() { return aiEmbeddingJson; }
+    public void setAiEmbeddingJson(String aiEmbeddingJson) { this.aiEmbeddingJson = aiEmbeddingJson; }
 
     public Set<Long> getVoterIds() { return voterIds; }
     public void setVoterIds(Set<Long> voterIds) { this.voterIds = voterIds; }

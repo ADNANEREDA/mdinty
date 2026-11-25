@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
+  AiIncidentStatus,
   IncidentStatus,
   ProposalStatus,
   ServiceIncident,
@@ -55,6 +56,25 @@ export class ChefService {
     );
   }
 
+  // Adaptez l'URL / verbe (PATCH ou PUT) selon votre IncidentController Spring Boot
+ updateIncidentAiStatus(
+    id: number,
+    aiStatus: AiIncidentStatus,
+    aiReason?: string
+  ): Observable<ServiceIncident> {
+    return this.http.put<ServiceIncident>(
+      `${this.apiUrl}/incidents/${id}/ai-status`,
+      { aiStatus, ...(aiReason ? { aiReason } : {}) },
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  deleteIncident(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/incidents/${id}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
   updateProposalStatus(id: number, status: ProposalStatus): Observable<ServiceProposal> {
     return this.http.put<ServiceProposal>(
       `${this.apiUrl}/proposals/${id}/status`,
@@ -62,4 +82,5 @@ export class ChefService {
       { headers: this.getAuthHeaders() }
     );
   }
+  
 }
